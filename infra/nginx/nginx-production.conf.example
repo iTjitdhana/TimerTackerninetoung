@@ -37,5 +37,5 @@ location /production/ {
 }
 
 location = /production {
-    return 302 /production/login;
+    return 302 /production/;
 }

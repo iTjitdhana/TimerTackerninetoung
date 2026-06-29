@@ -1,4 +1,5 @@
 import { clearAuthToken } from "@/shared/lib/auth"
+import { AUTH_COOKIE } from "@/shared/lib/auth-cookies"
 import { withBasePath } from "@/shared/lib/base-path"
 
 const DEFAULT_API_BASE = "http://127.0.0.1:3001/api"
@@ -15,10 +16,10 @@ function resolveApiBase(): string {
 function getRequestToken(): string | null {
   if (typeof window === "undefined") return null
 
-  const fromStorage = localStorage.getItem("auth_token")
+  const fromStorage = localStorage.getItem(AUTH_COOKIE)
   if (fromStorage) return fromStorage
 
-  const match = document.cookie.match(/(?:^|;\s*)auth_token=([^;]*)/)
+  const match = document.cookie.match(new RegExp(`(?:^|;\\s*)${AUTH_COOKIE}=([^;]*)`))
   return match ? decodeURIComponent(match[1]) : null
 }
 

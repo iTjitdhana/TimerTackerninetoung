@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
+import { AUTH_COOKIE, AUTH_MENUS_COOKIE } from "./src/shared/lib/auth-cookies"
+import { withBasePath } from "./src/shared/lib/base-path"
 
 const PUBLIC_PATHS = ["/login", "/register", "/access-denied"]
 
@@ -15,6 +17,10 @@ const ROUTE_MENUS: Record<string, string> = {
   "/admin": "admin_console",
   "/cost-dashboard": "cost_dashboard",
   "/fg-master-settings": "fg_master_settings",
+}
+
+function redirectTo(path: string, request: NextRequest) {
+  return NextResponse.redirect(new URL(withBasePath(path), request.url))
 }
 
 function getRequiredMenu(pathname: string): string | null {
@@ -52,24 +58,23 @@ function resolveLandingPath(authMenus?: string): string {
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
-  // ให้ /api ผ่านไป proxy หา backend — ห้าม redirect ไป login
   if (pathname.startsWith("/api/")) {
     return NextResponse.next()
   }
 
-  const token = request.cookies.get("auth_token")?.value
-  const authMenus = request.cookies.get("auth_menus")?.value
+  const token = request.cookies.get(AUTH_COOKIE)?.value
+  const authMenus = request.cookies.get(AUTH_MENUS_COOKIE)?.value
   const isPublicPath = PUBLIC_PATHS.some((path) => pathname.startsWith(path))
 
   if (isPublicPath) {
     if (token && pathname.startsWith("/login")) {
-      return NextResponse.redirect(new URL(resolveLandingPath(authMenus), request.url))
+      return redirectTo(resolveLandingPath(authMenus), request)
     }
     return NextResponse.next()
   }
 
   if (!token) {
-    const loginUrl = new URL("/login", request.url)
+    const loginUrl = new URL(withBasePath("/login"), request.url)
     loginUrl.searchParams.set("from", pathname)
     return NextResponse.redirect(loginUrl)
   }
@@ -82,12 +87,12 @@ export function middleware(request: NextRequest) {
   ) {
     const landing = resolveLandingPath(authMenus)
     if (landing !== "/" && landing !== pathname) {
-      return NextResponse.redirect(new URL(landing, request.url))
+      return redirectTo(landing, request)
     }
   }
 
   if (requiredMenu && !hasMenuAccess(requiredMenu, authMenus)) {
-    return NextResponse.redirect(new URL("/access-denied", request.url))
+    return redirectTo("/access-denied", request)
   }
 
   return NextResponse.next()

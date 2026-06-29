@@ -1,4 +1,8 @@
 import type { AuthSession, AuthSessionData, AuthUser, MenuKey, UserPermissions } from "./permissions.constants"
+import { AUTH_COOKIE, AUTH_MENUS_COOKIE } from "./auth-cookies"
+import { withBasePath } from "./base-path"
+
+export { AUTH_COOKIE, AUTH_MENUS_COOKIE }
 
 export const AUTH_USER_UPDATED_EVENT = "auth:user-updated"
 
@@ -7,20 +11,31 @@ export function notifyAuthUserUpdated() {
   window.dispatchEvent(new Event(AUTH_USER_UPDATED_EVENT))
 }
 
-const AUTH_COOKIE = "auth_token"
-const AUTH_MENUS_COOKIE = "auth_menus"
 const AUTH_USER_KEY = "auth_user"
 const AUTH_PERMISSIONS_KEY = "auth_permissions"
+const LEGACY_AUTH_COOKIE = "auth_token"
+const LEGACY_AUTH_MENUS_COOKIE = "auth_menus"
 const MAX_AGE_SECONDS = 60 * 60 * 8 // 8 hours
+
+function cookiePath(): string {
+  return withBasePath("/") || "/"
+}
 
 function setCookie(name: string, value: string, maxAge = MAX_AGE_SECONDS) {
   if (typeof document === "undefined") return
-  document.cookie = `${name}=${encodeURIComponent(value)}; path=/; max-age=${maxAge}; SameSite=Lax`
+  const path = cookiePath()
+  document.cookie = `${name}=${encodeURIComponent(value)}; path=${path}; max-age=${maxAge}; SameSite=Lax`
 }
 
-function clearCookie(name: string) {
+function clearCookie(name: string, path = cookiePath()) {
   if (typeof document === "undefined") return
-  document.cookie = `${name}=; path=/; max-age=0; SameSite=Lax`
+  document.cookie = `${name}=; path=${path}; max-age=0; SameSite=Lax`
+}
+
+/** ล้าง cookie เก่าที่ path=/ ซึ่งอาจชนกับ portal */
+function clearLegacyPortalCookies() {
+  clearCookie(LEGACY_AUTH_COOKIE, "/")
+  clearCookie(LEGACY_AUTH_MENUS_COOKIE, "/")
 }
 
 export function setAuthSession(session: AuthSession) {
@@ -30,6 +45,7 @@ export function setAuthSession(session: AuthSession) {
   localStorage.setItem(AUTH_PERMISSIONS_KEY, JSON.stringify(session.permissions))
   setCookie(AUTH_COOKIE, session.token)
   setCookie(AUTH_MENUS_COOKIE, session.permissions.menus.join(","))
+  clearLegacyPortalCookies()
   notifyAuthUserUpdated()
 }
 
@@ -54,6 +70,7 @@ export function clearAuthToken() {
   localStorage.removeItem(AUTH_PERMISSIONS_KEY)
   clearCookie(AUTH_COOKIE)
   clearCookie(AUTH_MENUS_COOKIE)
+  clearLegacyPortalCookies()
 }
 
 export function getAuthToken(): string | null {
