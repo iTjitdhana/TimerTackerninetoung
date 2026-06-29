@@ -5,8 +5,11 @@
 #   1. รัน NestJS ที่ 127.0.0.1:3001
 #   2. รัน Next.js ที่ 127.0.0.1:3000 (build ด้วย NEXT_PUBLIC_BASE_PATH=/production)
 #   3. nginx -t && nginx -s reload
+#
+# หมายเหตุ: ใช้ location /production (ไม่มี slash ท้าย) เพื่อรองรับทั้ง
+#   /production และ /production/ และ /production/login — ห้ามใช้แค่ /production/ อย่างเดียว
 
-# API + SSE — ต้องอยู่ก่อน location /production/
+# API + SSE — ต้องอยู่ก่อน location /production
 location /production/api/ {
     proxy_pass http://127.0.0.1:3001/api/;
     proxy_http_version 1.1;
@@ -24,8 +27,8 @@ location /production/api/ {
     chunked_transfer_encoding off;
 }
 
-location /production/ {
-    proxy_pass http://127.0.0.1:3000/production/;
+location /production {
+    proxy_pass http://127.0.0.1:3000/production;
     proxy_http_version 1.1;
 
     proxy_set_header Host              $host;
@@ -34,8 +37,4 @@ location /production/ {
     proxy_set_header X-Forwarded-Proto $scheme;
     proxy_set_header Upgrade           $http_upgrade;
     proxy_set_header Connection        "upgrade";
-}
-
-location = /production {
-    return 302 /production/;
 }

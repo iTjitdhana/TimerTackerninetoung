@@ -6,6 +6,7 @@ import { LoginPage, RegisterPage, I18nProvider } from "@jitdhana/pin-login"
 import "@jitdhana/pin-login/styles.css"
 import { authApi } from "@/shared/api-client/services"
 import { clearAuthToken, getAuthToken, getDefaultLandingPath, setAuthSession } from "@/shared/lib/auth"
+import { appPathForNavigation } from "@/shared/lib/base-path"
 import { AUTH_BRANDING } from "../constants/branding"
 
 interface AuthLoginPageProps {
@@ -57,13 +58,17 @@ export function AuthLoginPage({ mode = "login" }: AuthLoginPageProps) {
     }
   }, [mode, router])
 
+  const navigateAfterAuth = (path: string) => {
+    window.location.assign(appPathForNavigation(path))
+  }
+
   const handleLogin = async (pin: string) => {
     const result = await authApi.verifyPin(pin)
     setAuthSession(result)
     if (result.needsRegistration) {
-      router.push("/register")
+      navigateAfterAuth("/register")
     } else {
-      router.push(getDefaultLandingPath())
+      navigateAfterAuth(getDefaultLandingPath())
     }
     return result.user
   }

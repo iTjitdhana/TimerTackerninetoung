@@ -20,7 +20,10 @@ const ROUTE_MENUS: Record<string, string> = {
 }
 
 function redirectTo(path: string, request: NextRequest) {
-  return NextResponse.redirect(new URL(withBasePath(path), request.url))
+  const target = path === "/" && process.env.NEXT_PUBLIC_BASE_PATH
+    ? `${process.env.NEXT_PUBLIC_BASE_PATH.replace(/\/$/, "")}/`
+    : withBasePath(path)
+  return NextResponse.redirect(new URL(target, request.url))
 }
 
 function getRequiredMenu(pathname: string): string | null {
