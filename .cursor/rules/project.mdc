@@ -1,0 +1,62 @@
+---
+description: TimeTracker monorepo - แนวทางการทำงานของ Agent อ้างอิงจากโครงสร้างจริง
+globs:
+alwaysApply: true
+---
+
+# TimeTracker — Project Rules (อ้างอิงจาก Source Code จริงเท่านั้น)
+
+กฎเหล่านี้สรุปจากโค้ดจริงในโปรเจกต์ ดูรายละเอียดเต็มที่ `PROJECT_CONTEXT.md`
+ห้ามแนะนำ framework ใหม่ / ห้ามเปลี่ยน architecture เดิม / ห้ามเพิ่ม best practice ที่ไม่มีในโปรเจกต์
+
+## Tech stack (ห้ามเปลี่ยน)
+- Monorepo: **pnpm workspace** (`frontend/apps/*`, `frontend/packages/*`, `backend`)
+- Backend: **NestJS 11 + Prisma 6 + MySQL** (driver `mysql2` สำหรับ DB ภายนอก), JWT (`@nestjs/jwt`), validation ด้วย `class-validator`/`class-transformer`
+- Frontend: **Next.js 16 (App Router) + React 19 + Tailwind v4** + Radix/shadcn UI, `react-hook-form` + `zod`
+- Node >= 20, pnpm
+- ใช้ TypeScript `strict` ทั้ง backend และ frontend
+
+## Architecture Pattern (ที่ใช้อยู่จริง)
+- **Modular monorepo:** แต่ละ feature เป็น module แยกทั้งฝั่ง backend (`backend/src/modules/<name>/`) และ frontend (`frontend/apps/web/src/modules/<name>/`)
+- โมดูลสื่อสารกันผ่าน **API เท่านั้น**; โค้ดร่วมอยู่ใน `shared/` (backend) และ `src/shared/` (frontend)
+- frontend route ใน `app/` เป็น **thin wrapper** — logic อยู่ใน `src/modules/<name>/`; แต่ละ module export public API ผ่าน `index.ts`
+- **Workplan ใช้ Adapter Pattern:** provider เลือกจาก env `WORKPLAN_PROVIDER` (`mock`/`http`/`db`) ผ่าน `useFactory` + DI token `WORKPLAN_PROVIDER`
+
+## Backend conventions (ที่ใช้อยู่จริง)
+- ทุก route อยู่ใต้ global prefix `/api` (`app.setGlobalPrefix("api")`); controller ใช้ `@Controller("<prefix>")` แบบไม่มี `api/` นำหน้า
+- Controller ที่ต้อง auth: ใส่ `@UseGuards(JwtAuthGuard, PermissionsGuard)` ที่ระดับ class และคุมสิทธิ์ราย endpoint ด้วย `@RequirePermissions("<action_key>")` (action keys อยู่ใน `shared/auth/permissions.constants.ts`)
+- ดึงผู้ใช้ด้วย `@CurrentUser() user: AuthenticatedRequestUser`; **override field ผู้กระทำจาก `user.sub` เสมอ ไม่เชื่อค่า actor จาก body**
+- DTO: ใช้ class + decorator (`@IsString`, `@IsOptional`, `@ValidateNested({ each: true })` + `@Type(() => Dto)` สำหรับ nested array) ให้ `ValidationPipe({ whitelist: true, transform: true })` จัดการ
+- **DB หลัก:** เข้าผ่าน Prisma เสมอ (`this.prisma.<model>.<op>(...)`); inject `PrismaService` ผ่าน constructor
+- **DB ภายนอก (process steps/templates):** เข้าผ่าน `mysql2/promise` pool ที่สร้างใน service (`onModuleInit`/`onModuleDestroy`) เฉพาะเมื่อ env DB ภายนอกถูกตั้งและต่างจาก DB หลัก
+- Service ประกอบงานจาก shared services ใน `shared/services/` ผ่าน constructor DI
+- **ห้ามรัน prisma migrate ทับ DB เดิม** — ใช้ `db pull` + `generate` เท่านั้น (ดู `db:pull`/`db:generate`); schema มาจาก `db pull`
+- ตัวแปร DB ตั้งแบบแยก (`DB_*`, `STEPS_DB_*`, `TEMPLATES_DB_*`); `DATABASE_URL` สร้างอัตโนมัติใน `shared/config/load-database-url.ts` — อย่า hardcode connection string
+- เวลา/timezone: ใช้ utility ใน `shared/utils/` (เช่น `datetime.util.ts`); Prisma ตั้ง `SET time_zone = '+00:00'` ตอนเชื่อมต่อ
+
+## Frontend conventions (ที่ใช้อยู่จริง)
+- เรียก backend ผ่าน `apiClient` (`src/shared/api-client`) เท่านั้น (`get/post/put/patch/delete`) — อย่าเรียก `fetch` ตรง; โยน/รับ `ApiError`
+- เส้นทาง API ฝั่ง browser ใช้ relative `/api/...` (ผ่าน Next.js rewrite ไป backend 3001) — ห้าม hardcode host:port
+- โครง module: `components/`, `hooks/`, `services/<name>.api.ts`, `utils/`, `types/`, `constants/`, `mappers/`, `index.ts`; service export เป็น object (เช่น `formulaWeighingApi`) ระบุ type ของ response
+- hook ฝั่ง client ขึ้นต้นด้วย `"use client"`; reuse `useApiQuery` จาก `@/shared/hooks`
+- route ใน `app/<route>/page.tsx` เป็น wrapper บางๆ import component จาก `@/modules/<name>`; ใช้ `<Suspense>` ตามที่ทำอยู่
+- ใช้ path alias `@/*` (-> `src/*`); UI ใช้ component ใน `src/shared/ui/` (shadcn/Radix) อย่าเพิ่ม UI library ใหม่
+- การเข้าถึง route/เมนูคุมผ่าน `middleware.ts` (cookie `auth_token`, `auth_menus`)
+
+## Naming conventions (ที่ใช้อยู่จริง)
+- ไฟล์ backend: kebab-case ตามบทบาท เช่น `*.controller.ts`, `*.service.ts`, `*.module.ts`, `*.dto.ts`, `*.util.ts`, `*.guard.ts`, `*.decorator.ts`, `*.service.spec.ts`
+- ไฟล์ frontend: component เป็น PascalCase `*.tsx` (เช่น `FormulaWeighingPage.tsx`), util/hook/service เป็น kebab/camel เช่น `formula-weighing.api.ts`, `useFormulaWeighing.ts`
+- Prisma model / คอลัมน์: **snake_case** ตาม DB จริง (เช่น `work_plans`, `batch_material_usage`, `job_code`) — ใช้ชื่อให้ตรง schema เสมอ
+- permission action keys: รูปแบบ `<domain>.<action>` (เช่น `formula_weighing.write`, `production_timer.admin_edit`)
+- Test: `*.spec.ts` (backend) / `*.test.ts` (frontend), รันด้วย `vitest`
+
+## ข้อห้าม / สิ่งที่ต้องระวัง
+- อย่าสร้างชื่อ service/API/ตาราง/โฟลเดอร์/workflow ขึ้นเอง — ตรวจกับ source จริงก่อน
+- อย่าคอมมิตค่า secret; `JWT_SECRET` ใน production ต้องแข็งแรง (>= 16 ตัว, ห้ามค่า default) มิฉะนั้น backend ไม่ start
+- demo PIN ใช้ได้เฉพาะ non-production + `ALLOW_DEMO_PINS=true`
+- เมื่อข้อมูลไม่ชัด ให้ถามผู้ใช้หรือระบุว่า "ไม่พบข้อมูลในโปรเจกต์" — ห้ามเดา
+
+## คำสั่งที่ใช้บ่อย (จาก package.json)
+- dev ทั้งระบบ: `pnpm dev` | เฉพาะส่วน: `pnpm dev:web`, `pnpm dev:backend`
+- build: `pnpm build` | Prisma: `pnpm db:generate`, `pnpm db:pull` (หลีกเลี่ยง `db:migrate` กับ DB เดิม)
+- test: backend/web `vitest run`; frontend lint: `eslint .`

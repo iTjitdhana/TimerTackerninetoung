@@ -1,0 +1,40 @@
+{
+  "name": "@jitdhana/pin-login",
+  "version": "0.1.0",
+  "description": "PIN login & register components for React apps",
+  "type": "module",
+  "main": "./dist/pin-login.umd.cjs",
+  "module": "./dist/pin-login.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/pin-login.js",
+      "require": "./dist/pin-login.umd.cjs"
+    },
+    "./styles.css": "./dist/pin-login.css"
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -p tsconfig.build.json && vite build --mode library",
+    "preview": "vite preview"
+  },
+  "peerDependencies": {
+    "react": ">=18",
+    "react-dom": ">=18"
+  },
+  "devDependencies": {
+    "@types/react": "^19.1.8",
+    "@types/react-dom": "^19.1.6",
+    "@vitejs/plugin-react": "^4.5.2",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "typescript": "^5.8.3",
+    "vite": "^6.3.5",
+    "vite-plugin-dts": "^4.5.4"
+  }
+}

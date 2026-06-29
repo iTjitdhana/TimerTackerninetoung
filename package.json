@@ -1,0 +1,20 @@
+{
+  "name": "timetracker",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "pnpm --parallel --filter web --filter backend dev",
+    "dev:web": "pnpm --filter web dev",
+    "dev:backend": "pnpm --filter backend dev",
+    "build": "pnpm -r build",
+    "build:web": "pnpm --filter web build",
+    "build:backend": "pnpm --filter backend build",
+    "build:pin-login": "pnpm --filter @jitdhana/pin-login build",
+    "db:migrate": "pnpm --filter backend prisma:migrate",
+    "db:generate": "pnpm --filter backend prisma:generate",
+    "db:pull": "pnpm --filter backend prisma:pull"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

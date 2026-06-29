@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#0a1628" />
+  <title data-i18n="pageTitleLogin">เข้าสู่ระบบ Portal</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&family=Noto+Sans+Myanmar:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="page-bg" aria-hidden="true"></div>
+
+  <div class="lang-switcher">
+    <button
+      type="button"
+      id="langToggle"
+      class="lang-toggle"
+      aria-haspopup="listbox"
+      aria-expanded="false"
+      aria-controls="langMenu"
+      aria-label="เปลี่ยนภาษา"
+    >
+      <svg class="lang-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.5"/>
+        <path d="M3 12h18M12 3c2.5 2.8 3.8 6 3.8 9s-1.3 6.2-3.8 9M12 3c-2.5 2.8-3.8 6-3.8 9s1.3 6.2 3.8 9" stroke="currentColor" stroke-width="1.5"/>
+      </svg>
+      <span id="langCurrent">TH</span>
+      <svg class="lang-chevron" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+    </button>
+    <ul id="langMenu" class="lang-menu" role="listbox" hidden>
+      <li role="option"><button type="button" data-lang="th" class="lang-option is-active">ไทย</button></li>
+      <li role="option"><button type="button" data-lang="en" class="lang-option">English</button></li>
+      <li role="option"><button type="button" data-lang="my" class="lang-option">မြန်မာ</button></li>
+    </ul>
+  </div>
+
+  <div class="page">
+    <div class="login-card" role="main">
+      <div class="brand">
+        <div class="brand-logo">
+          <img
+            src="assets/jitdhana-logo.png"
+            alt="JITDHANA Co., LTD"
+            width="120"
+            height="120"
+          />
+        </div>
+        <h1 class="brand-title" data-i18n="brandTitle">บริษัท จิตต์ธนา จำกัด</h1>
+        <p class="brand-subtitle" data-i18n="subtitleLogin">เข้าสู่ระบบด้วย PIN 4 หลัก</p>
+      </div>
+
+      <form id="loginForm" class="login-form" novalidate>
+        <div class="field">
+          <label for="pin-0">
+            PIN <span class="label-hint" data-i18n="pinHint">(4 หลัก)</span>
+          </label>
+          <div class="pin-group" id="pinGroup" role="group" data-i18n-aria="pinGroupLabel">
+            <input type="password" inputmode="numeric" pattern="[0-9]*" maxlength="1" class="pin-box" id="pin-0" data-i18n-aria="pinDigit" data-digit="1" autocomplete="off" />
+            <input type="password" inputmode="numeric" pattern="[0-9]*" maxlength="1" class="pin-box" id="pin-1" data-i18n-aria="pinDigit" data-digit="2" autocomplete="off" />
+            <input type="password" inputmode="numeric" pattern="[0-9]*" maxlength="1" class="pin-box" id="pin-2" data-i18n-aria="pinDigit" data-digit="3" autocomplete="off" />
+            <input type="password" inputmode="numeric" pattern="[0-9]*" maxlength="1" class="pin-box" id="pin-3" data-i18n-aria="pinDigit" data-digit="4" autocomplete="off" />
+          </div>
+        </div>
+
+        <div id="alertBox" class="alert" role="alert" hidden></div>
+
+        <button type="submit" id="submitBtn" class="btn-primary" disabled>
+          <span class="btn-text" data-i18n="signIn">เข้าสู่ระบบ</span>
+          <span class="btn-spinner" hidden aria-hidden="true"></span>
+        </button>
+      </form>
+
+      <p class="form-nav">
+        <a href="register.html" data-i18n="goRegister">ลงทะเบียน</a>
+      </p>
+    </div>
+
+    <p class="page-footer">&copy; 2026 JITDHANA CO., LTD — <span data-i18n="internalSystem">ระบบภายใน</span></p>
+  </div>
+
+  <script src="i18n.js"></script>
+  <script src="pin-store.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx tsc *)",
+      "Bash(pnpm exec *)",
+      "Bash(pnpm --filter backend exec tsc --noEmit)",
+      "Bash(pnpm --filter @jitdhana/pin-login exec tsc --noEmit)",
+      "Bash(pnpm build:pin-login)",
+      "PowerShell(Get-ChildItem \"D:\\\\TimeTacker\\\\frontend\\\\apps\\\\web\\\\src\\\\shared\" -Recurse | Where-Object { !$_.PSIsContainer } | Select-Object Name | Select-Object -First 25)"
+    ]
+  }
+}

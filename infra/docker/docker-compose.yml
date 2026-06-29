@@ -1,0 +1,55 @@
+# Docker Compose — optional deployment stack
+# Default development uses MySQL local (see README.md)
+# postgres service below is legacy/optional; not used in local MySQL workflow
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: timetracker-postgres
+    restart: unless-stopped
+    profiles:
+      - postgres
+    environment:
+      POSTGRES_USER: timetracker
+      POSTGRES_PASSWORD: timetracker
+      POSTGRES_DB: timetracker
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U timetracker"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ../..
+      dockerfile: infra/docker/Dockerfile.backend
+    container_name: timetracker-backend
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: mysql://timetracker:timetracker@host.docker.internal:3306/timetracker
+      PORT: 3001
+      JWT_SECRET: dev-secret-change-in-production
+      WORKPLAN_PROVIDER: mock
+      CORS_ORIGIN: http://localhost:3000
+    ports:
+      - "3001:3001"
+
+  frontend:
+    build:
+      context: ../..
+      dockerfile: infra/docker/Dockerfile.frontend
+    container_name: timetracker-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:3001/api
+    ports:
+      - "3000:3000"
+
+volumes:
+  postgres_data:

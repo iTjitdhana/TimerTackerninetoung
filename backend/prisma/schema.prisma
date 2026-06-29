@@ -1,0 +1,988 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model batch_material_usage {
+  id                 Int                @id @default(autoincrement())
+  batch_id           Int
+  material_id        Int
+  planned_qty        Decimal            @db.Decimal(10, 2)
+  actual_qty         Decimal            @db.Decimal(10, 2)
+  unit               String             @db.VarChar(16)
+  unit_price         Decimal            @db.Decimal(10, 2)
+  note               String?            @db.VarChar(500)
+  price_source       String?            @db.VarChar(10)
+  total_cost         Decimal?           @db.Decimal(12, 2)
+  weighed_by         Int?
+  weighed_at         DateTime?          @default(now()) @db.Timestamp(0)
+  created_at         DateTime?          @default(now()) @db.Timestamp(0)
+  updated_at         DateTime?          @updatedAt @db.Timestamp(0)
+  production_batches production_batches @relation(fields: [batch_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "batch_material_usage_ibfk_1")
+  materials          materials          @relation(fields: [material_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "batch_material_usage_ibfk_2")
+  users              users?             @relation(fields: [weighed_by], references: [id], onUpdate: NoAction, map: "batch_material_usage_ibfk_3")
+
+  @@index([batch_id], map: "idx_batch_id")
+  @@index([material_id], map: "idx_material_id")
+  @@index([weighed_at], map: "idx_weighed_at")
+  @@index([weighed_by], map: "idx_weighed_by")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model batch_production_results {
+  id                  Int                @id @default(autoincrement())
+  batch_id            Int                @unique(map: "unique_batch_id")
+  product_code        String             @db.VarChar(20)
+  good_qty            Decimal            @default(0.00) @db.Decimal(10, 2)
+  good_secondary_qty  Decimal?           @db.Decimal(10, 2)
+  good_secondary_unit String?            @db.VarChar(16)
+  defect_qty          Decimal            @default(0.00) @db.Decimal(10, 2)
+  total_qty           Decimal?           @db.Decimal(10, 2)
+  recorded_by         Int?
+  recorded_at         DateTime?          @default(now()) @db.Timestamp(0)
+  created_at          DateTime?          @default(now()) @db.Timestamp(0)
+  updated_at          DateTime?          @default(now()) @db.Timestamp(0)
+  production_batches  production_batches @relation(fields: [batch_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "batch_production_results_ibfk_1")
+  products            products           @relation(fields: [product_code], references: [product_code], onDelete: Cascade, onUpdate: NoAction, map: "batch_production_results_ibfk_2")
+  users               users?             @relation(fields: [recorded_by], references: [id], onUpdate: NoAction, map: "batch_production_results_ibfk_3")
+
+  @@index([batch_id], map: "idx_batch_id")
+  @@index([product_code], map: "idx_product_code")
+  @@index([recorded_at], map: "idx_recorded_at")
+  @@index([recorded_by], map: "idx_recorded_by")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model fg {
+  id                     Int       @id @default(autoincrement())
+  FG_Code                String    @unique(map: "unique_fg_code") @db.VarChar(16)
+  FG_Name                String    @db.VarChar(127)
+  FG_Unit                String    @db.VarChar(16)
+  FG_Size                String    @db.VarChar(255)
+  base_unit              String?   @default("กก.") @db.VarChar(16)
+  conversion_rate        Decimal?  @default(1.0000) @db.Decimal(10, 4)
+  conversion_description String?   @db.VarChar(255)
+  created_at             DateTime? @default(now()) @db.Timestamp(0)
+  updated_at             DateTime? @default(now()) @db.Timestamp(0)
+
+  @@index([FG_Code], map: "idx_fg_code")
+  @@index([FG_Name], map: "idx_fg_name")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model fg_bom {
+  id         Int       @id @default(autoincrement())
+  FG_Code    String    @db.VarChar(11)
+  Raw_Code   String    @db.VarChar(11)
+  Raw_Qty    Float     @db.Float
+  Raw_Unit   String    @db.Text
+  created_at DateTime? @default(now()) @db.Timestamp(0)
+  updated_at DateTime? @default(now()) @db.Timestamp(0)
+
+  @@index([FG_Code], map: "idx_fg_code")
+  @@index([Raw_Code], map: "idx_raw_code")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model finished_flags {
+  work_plan_id Int        @id
+  is_finished  Boolean?   @default(false)
+  updated_at   DateTime?  @default(now()) @db.Timestamp(0)
+  created_at   DateTime?  @default(now()) @db.Timestamp(0)
+  work_plans   work_plans @relation(fields: [work_plan_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "finished_flags_ibfk_1")
+
+  @@index([work_plan_id], map: "idx_finished_flags_work_plan_id")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model logs {
+  id             Int         @id @default(autoincrement())
+  work_plan_id   Int?
+  batch_id       String?     @db.VarChar(100)
+  process_number Int?
+  status         logs_status
+  timestamp      DateTime    @db.DateTime(0)
+  user_id        Int?
+  created_at     DateTime?   @default(now()) @db.Timestamp(0)
+  work_plans     work_plans? @relation(fields: [work_plan_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "logs_ibfk_1")
+
+  @@index([user_id], map: "idx_logs_user_id")
+  @@index([status], map: "idx_status")
+  @@index([timestamp], map: "idx_timestamp")
+  @@index([work_plan_id], map: "idx_work_plan_id")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model machines {
+  id                 Int                  @id @default(autoincrement())
+  machine_code       String               @unique(map: "unique_machine_code") @db.VarChar(50)
+  machine_name       String               @db.VarChar(100)
+  machine_type       String               @db.VarChar(50)
+  location           String?              @db.VarChar(100)
+  status             machines_status?     @default(active)
+  description        String?              @db.Text
+  created_at         DateTime?            @default(now()) @db.Timestamp(0)
+  updated_at         DateTime?            @default(now()) @db.Timestamp(0)
+  process_executions process_executions[]
+  work_plan_drafts   work_plan_drafts[]
+  work_plans         work_plans[]
+
+  @@index([machine_code], map: "idx_machine_code")
+  @@index([machine_type], map: "idx_machine_type")
+  @@index([status], map: "idx_status")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model material {
+  id         Int       @id @default(autoincrement())
+  Mat_Id     String    @unique(map: "unique_mat_id") @db.VarChar(16)
+  Mat_Name   String    @db.VarChar(255)
+  Mat_Unit   String    @db.VarChar(64)
+  price      Decimal?  @default(0.00) @db.Decimal(10, 2)
+  created_at DateTime? @default(now()) @db.Timestamp(0)
+  updated_at DateTime? @default(now()) @db.Timestamp(0)
+
+  @@index([Mat_Id], map: "idx_mat_id")
+  @@index([Mat_Name], map: "idx_mat_name")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model materials {
+  id                   Int                    @id @default(autoincrement())
+  material_code        String                 @unique(map: "unique_material_code") @db.VarChar(16)
+  material_name        String                 @db.VarChar(255)
+  unit                 String                 @db.VarChar(64)
+  price                Decimal?               @default(0.00) @db.Decimal(10, 2)
+  created_at           DateTime?              @default(now()) @db.Timestamp(0)
+  updated_at           DateTime?              @default(now()) @db.Timestamp(0)
+  batch_material_usage batch_material_usage[]
+  product_bom          product_bom[]
+
+  @@index([material_code], map: "idx_material_code")
+  @@index([material_name], map: "idx_material_name")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model menu_catalog {
+  id                    Int                     @id @default(autoincrement())
+  menu_key              String                  @unique(map: "unique_menu_key") @db.VarChar(50)
+  label                 String                  @db.VarChar(100)
+  path                  String                  @db.VarChar(200)
+  menu_group            String?                 @default("system") @db.VarChar(50)
+  sort_order            Int?                    @default(0)
+  is_active             Boolean?                @default(true)
+  created_at            DateTime?               @default(now()) @db.Timestamp(0)
+  updated_at            DateTime?               @default(now()) @db.Timestamp(0)
+  role_menu_permissions role_menu_permissions[]
+
+  @@index([is_active], map: "idx_is_active")
+  @@index([menu_group], map: "idx_menu_group")
+  @@index([sort_order], map: "idx_sort_order")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model process_execution_operators {
+  id                 Int                               @id @default(autoincrement())
+  execution_id       Int
+  user_id            Int
+  role               process_execution_operators_role? @default(operator)
+  added_at           DateTime?                         @default(now()) @db.Timestamp(0)
+  process_executions process_executions                @relation(fields: [execution_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "process_execution_operators_ibfk_1")
+  users              users                             @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "process_execution_operators_ibfk_2")
+
+  @@unique([execution_id, user_id], map: "unique_execution_user")
+  @@index([execution_id], map: "idx_execution")
+  @@index([role], map: "idx_role")
+  @@index([user_id], map: "idx_user")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model process_executions {
+  id                          Int                           @id @default(autoincrement())
+  work_plan_id                Int?
+  batch_id                    Int?
+  template_id                 Int
+  product_code                String                        @db.VarChar(20)
+  process_number              Int
+  process_description         String                        @db.VarChar(200)
+  actual_worker_count         Int?
+  start_time                  DateTime?                     @db.DateTime(0)
+  end_time                    DateTime?                     @db.DateTime(0)
+  duration_minutes            Int?
+  status                      process_executions_status?    @default(pending)
+  machine_id                  Int?
+  production_room_id          Int?
+  notes                       String?                       @db.Text
+  issues                      String?                       @db.Text
+  recorded_by                 Int?
+  recorded_at                 DateTime?                     @default(now()) @db.Timestamp(0)
+  updated_at                  DateTime?                     @default(now()) @db.Timestamp(0)
+  process_execution_operators process_execution_operators[]
+  work_plans                  work_plans?                   @relation(fields: [work_plan_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "process_executions_ibfk_1")
+  production_batches          production_batches?           @relation(fields: [batch_id], references: [id], onUpdate: NoAction, map: "process_executions_ibfk_2")
+  process_templates           process_templates             @relation(fields: [template_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "process_executions_ibfk_3")
+  products                    products                      @relation(fields: [product_code], references: [product_code], onDelete: NoAction, onUpdate: NoAction, map: "process_executions_ibfk_4")
+  machines                    machines?                     @relation(fields: [machine_id], references: [id], onUpdate: NoAction, map: "process_executions_ibfk_5")
+  production_rooms            production_rooms?             @relation(fields: [production_room_id], references: [id], onUpdate: NoAction, map: "process_executions_ibfk_6")
+  users                       users?                        @relation(fields: [recorded_by], references: [id], onUpdate: NoAction, map: "process_executions_ibfk_7")
+
+  @@index([batch_id], map: "idx_batch")
+  @@index([product_code], map: "idx_product")
+  @@index([recorded_at], map: "idx_recorded_at")
+  @@index([status], map: "idx_status")
+  @@index([template_id], map: "idx_template")
+  @@index([work_plan_id], map: "idx_work_plan")
+  @@index([machine_id], map: "machine_id")
+  @@index([production_room_id], map: "production_room_id")
+  @@index([recorded_by], map: "recorded_by")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model process_steps {
+  id                  Int       @id @default(autoincrement())
+  job_code            String    @db.VarChar(20)
+  job_name            String    @db.VarChar(100)
+  date_recorded       DateTime  @db.Date
+  worker_count        Int?
+  process_number      Int
+  process_description String    @db.VarChar(200)
+  created_at          DateTime? @default(now()) @db.Timestamp(0)
+  updated_at          DateTime? @default(now()) @db.Timestamp(0)
+
+  @@index([date_recorded], map: "idx_date_recorded")
+  @@index([job_code], map: "idx_job_code")
+  @@index([job_name], map: "idx_job_name")
+  @@index([process_number], map: "idx_process_number")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model process_template_history {
+  id           Int                                  @id @default(autoincrement())
+  product_code String                               @db.VarChar(20)
+  version      Int
+  change_type  process_template_history_change_type
+  changed_by   Int?
+  changed_at   DateTime?                            @default(now()) @db.Timestamp(0)
+  change_note  String?                              @db.Text
+  old_data     Json?
+  new_data     Json?
+  products     products                             @relation(fields: [product_code], references: [product_code], onDelete: Cascade, onUpdate: NoAction, map: "process_template_history_ibfk_1")
+  users        users?                               @relation(fields: [changed_by], references: [id], onUpdate: NoAction, map: "process_template_history_ibfk_2")
+
+  @@index([changed_by], map: "changed_by")
+  @@index([changed_at], map: "idx_changed_at")
+  @@index([product_code], map: "idx_product")
+  @@index([product_code, version], map: "idx_product_version")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model process_templates {
+  id                         Int                  @id @default(autoincrement())
+  product_code               String               @db.VarChar(20)
+  version                    Int?                 @default(1)
+  process_number             Int
+  process_description        String               @db.VarChar(200)
+  standard_worker_count      Int?
+  estimated_duration_minutes Int?
+  required_machine_type      String?              @db.VarChar(50)
+  required_room_type         String?              @db.VarChar(50)
+  required_skills            String?              @db.Text
+  notes                      String?              @db.Text
+  is_active                  Boolean?             @default(true)
+  created_by                 Int?
+  created_at                 DateTime?            @default(now()) @db.Timestamp(0)
+  updated_at                 DateTime?            @default(now()) @db.Timestamp(0)
+  process_executions         process_executions[]
+  products                   products             @relation(fields: [product_code], references: [product_code], onDelete: Cascade, onUpdate: NoAction, map: "process_templates_ibfk_1")
+  users                      users?               @relation(fields: [created_by], references: [id], onUpdate: NoAction, map: "process_templates_ibfk_2")
+
+  @@unique([product_code, version, process_number], map: "unique_product_version_step")
+  @@index([created_by], map: "created_by")
+  @@index([is_active], map: "idx_active")
+  @@index([product_code], map: "idx_product_code")
+  @@index([product_code, version], map: "idx_product_version")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model product_active_versions {
+  product_code   String    @id @db.VarChar(20)
+  active_version Int
+  set_by         Int?
+  note           String?   @db.VarChar(255)
+  set_at         DateTime? @default(now()) @db.Timestamp(0)
+  updated_at     DateTime? @default(now()) @db.Timestamp(0)
+  products       products  @relation(fields: [product_code], references: [product_code], onDelete: Cascade, onUpdate: NoAction, map: "fav_product_fk")
+  users          users?    @relation(fields: [set_by], references: [id], onUpdate: NoAction, map: "fav_user_fk")
+
+  @@index([active_version], map: "idx_active_version")
+  @@index([set_by], map: "idx_set_by")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model product_bom {
+  id            Int       @id @default(autoincrement())
+  product_code  String    @db.VarChar(20)
+  material_code String    @db.VarChar(16)
+  quantity      Decimal   @db.Decimal(10, 3)
+  unit          String    @db.VarChar(16)
+  created_at    DateTime? @default(now()) @db.Timestamp(0)
+  updated_at    DateTime? @default(now()) @db.Timestamp(0)
+  products      products  @relation(fields: [product_code], references: [product_code], onDelete: Cascade, onUpdate: NoAction, map: "product_bom_ibfk_1")
+  materials     materials @relation(fields: [material_code], references: [material_code], onDelete: Cascade, onUpdate: NoAction, map: "product_bom_ibfk_2")
+
+  @@unique([product_code, material_code], map: "unique_product_material")
+  @@index([material_code], map: "idx_material_code")
+  @@index([product_code], map: "idx_product_code")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model product_version_assignments {
+  id               Int       @id @default(autoincrement())
+  product_code     String    @db.VarChar(20)
+  assigned_version Int
+  assigned_by      Int?
+  reason           String?   @db.VarChar(255)
+  assigned_at      DateTime? @default(now()) @db.Timestamp(0)
+  products         products  @relation(fields: [product_code], references: [product_code], onDelete: Cascade, onUpdate: NoAction, map: "pva_product_fk")
+  users            users?    @relation(fields: [assigned_by], references: [id], onUpdate: NoAction, map: "pva_user_fk")
+
+  @@index([assigned_at], map: "idx_pva_assigned_at")
+  @@index([assigned_by], map: "idx_pva_assigned_by")
+  @@index([product_code], map: "idx_pva_product")
+  @@index([assigned_version], map: "idx_pva_version")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model production_batches {
+  id                       Int                        @id @default(autoincrement())
+  work_plan_id             Int
+  batch_code               String                     @db.VarChar(50)
+  product_code             String                     @db.VarChar(20)
+  planned_qty              Decimal                    @db.Decimal(10, 2)
+  actual_qty               Decimal?                   @db.Decimal(10, 2)
+  unit                     String?                    @db.VarChar(20)
+  start_time               DateTime                   @db.DateTime(0)
+  end_time                 DateTime?                  @db.DateTime(0)
+  status                   production_batches_status? @default(preparing)
+  created_at               DateTime?                  @default(now()) @db.Timestamp(0)
+  updated_at               DateTime?                  @default(now()) @db.Timestamp(0)
+  batch_count              Int                        @default(1)
+  batch_material_usage     batch_material_usage[]
+  batch_production_results batch_production_results?
+  process_executions       process_executions[]
+  work_plans               work_plans                 @relation(fields: [work_plan_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "production_batches_ibfk_1")
+  products                 products                   @relation(fields: [product_code], references: [product_code], onDelete: NoAction, onUpdate: NoAction, map: "production_batches_ibfk_2")
+  production_costs         production_costs[]
+  production_costs_history production_costs_history[]
+
+  @@index([batch_code], map: "idx_batch_code")
+  @@index([product_code], map: "idx_product")
+  @@index([start_time], map: "idx_start_time")
+  @@index([status], map: "idx_status")
+  @@index([work_plan_id], map: "idx_work_plan")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model production_costs {
+  id                  BigInt              @id @default(autoincrement()) @db.UnsignedBigInt
+  work_plan_id        BigInt?             @db.UnsignedBigInt
+  bu_id               Int?
+  batch_id            Int?
+  job_code            String              @db.VarChar(50)
+  job_name            String              @db.VarChar(255)
+  production_date     DateTime            @db.Date
+  input_material_qty  Decimal?            @default(0.00) @db.Decimal(12, 2)
+  input_material_unit String?             @db.VarChar(32)
+  output_unit_cost    Decimal?            @default(0.00) @db.Decimal(12, 2)
+  output_unit         String?             @db.VarChar(32)
+  output_qty          Decimal?            @default(0.00) @db.Decimal(12, 2)
+  yield_percent       Decimal?            @db.Decimal(7, 2)
+  time_used_minutes   Int?                @default(0)
+  operators_count     Int?                @default(0)
+  labor_rate_per_hour Decimal?            @default(480.00) @db.Decimal(10, 2)
+  labor_cost          Decimal?            @db.Decimal(12, 2)
+  material_cost       Decimal?            @default(0.00) @db.Decimal(12, 2)
+  total_cost          Decimal?            @default(0.00) @db.Decimal(12, 2)
+  notes               String?             @db.Text
+  created_at          DateTime?           @default(now()) @db.Timestamp(0)
+  updated_at          DateTime?           @default(now()) @db.Timestamp(0)
+  material_details    Json?
+  production_batches  production_batches? @relation(fields: [batch_id], references: [id], onUpdate: NoAction, map: "production_costs_ibfk_1")
+  business_units      business_units?     @relation(fields: [bu_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "production_costs_ibfk_bu")
+
+  @@unique([production_date, job_code, bu_id], map: "uniq_cost_by_job_date_bu")
+  @@index([batch_id], map: "idx_batch_id")
+  @@index([production_date], map: "idx_cost_date")
+  @@index([work_plan_id], map: "idx_cost_work_plan")
+  @@index([bu_id], map: "production_costs_ibfk_bu")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model production_costs_history {
+  id                      Int                 @id @default(autoincrement())
+  cost_id                 Int?
+  work_plan_id            Int
+  batch_id                Int?
+  job_code                String              @db.VarChar(32)
+  job_name                String              @db.VarChar(255)
+  production_date         DateTime            @db.Date
+  input_material_qty      Decimal?            @default(0.000) @db.Decimal(18, 3)
+  input_material_unit     String?             @default("กก.") @db.VarChar(16)
+  total_weight_kg         Decimal?            @default(0.000) @db.Decimal(18, 3)
+  material_cost           Decimal?            @default(0.00) @db.Decimal(18, 2)
+  output_qty              Decimal?            @default(0.000) @db.Decimal(18, 3)
+  output_unit             String?             @default("หน่วย") @db.VarChar(16)
+  output_unit_cost        Decimal?            @default(0.00) @db.Decimal(18, 2)
+  time_used_minutes       Int?                @default(0)
+  operators_count         Int?                @default(0)
+  labor_rate_per_hour     Decimal?            @default(0.00) @db.Decimal(18, 2)
+  planned_operators_count Int?                @default(0)
+  labor_workers_count     Int?                @default(0)
+  labor_daily_wage        Decimal?            @default(0.00) @db.Decimal(18, 2)
+  saved_by                String?             @db.VarChar(64)
+  saved_reason            String?             @db.VarChar(255)
+  created_at              DateTime?           @default(now()) @db.Timestamp(0)
+  work_plans              work_plans          @relation(fields: [work_plan_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "production_costs_history_ibfk_1")
+  production_batches      production_batches? @relation(fields: [batch_id], references: [id], onUpdate: NoAction, map: "production_costs_history_ibfk_2")
+
+  @@index([batch_id], map: "batch_id")
+  @@index([cost_id], map: "idx_cost_id")
+  @@index([created_at], map: "idx_created_at")
+  @@index([work_plan_id, production_date], map: "idx_wp_date")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model production_rooms {
+  id                 Int                        @id @default(autoincrement())
+  room_code          String                     @unique(map: "unique_room_code") @db.VarChar(50)
+  room_name          String                     @db.VarChar(100)
+  room_type          production_rooms_room_type
+  capacity           Int?
+  location           String?                    @db.VarChar(100)
+  status             production_rooms_status?   @default(active)
+  description        String?                    @db.Text
+  created_at         DateTime?                  @default(now()) @db.Timestamp(0)
+  updated_at         DateTime?                  @default(now()) @db.Timestamp(0)
+  process_executions process_executions[]
+  work_plan_drafts   work_plan_drafts[]
+  work_plans         work_plans[]
+
+  @@index([room_code], map: "idx_room_code")
+  @@index([room_type], map: "idx_room_type")
+  @@index([status], map: "idx_status")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model production_statuses {
+  id          Int          @id @default(autoincrement())
+  name        String       @db.VarChar(100)
+  description String?      @db.Text
+  color       String       @db.VarChar(7)
+  is_active   Boolean?     @default(true)
+  created_at  DateTime?    @default(now()) @db.Timestamp(0)
+  updated_at  DateTime?    @default(now()) @db.Timestamp(0)
+  work_plans  work_plans[]
+
+  @@index([is_active], map: "idx_is_active")
+  @@index([name], map: "idx_name")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model products {
+  id                          Int                           @id @default(autoincrement())
+  product_code                String                        @unique(map: "unique_product_code") @db.VarChar(20)
+  product_name                String                        @db.VarChar(100)
+  product_type                products_product_type?        @default(FG)
+  category                    String?                       @db.VarChar(50)
+  description                 String?                       @db.Text
+  unit                        String?                       @db.VarChar(20)
+  is_active                   Boolean?                      @default(true)
+  created_by                  Int?
+  created_at                  DateTime?                     @default(now()) @db.Timestamp(0)
+  updated_at                  DateTime?                     @default(now()) @db.Timestamp(0)
+  batch_production_results    batch_production_results[]
+  process_executions          process_executions[]
+  process_template_history    process_template_history[]
+  process_templates           process_templates[]
+  product_active_versions     product_active_versions?
+  product_bom                 product_bom[]
+  product_version_assignments product_version_assignments[]
+  production_batches          production_batches[]
+  users                       users?                        @relation(fields: [created_by], references: [id], onUpdate: NoAction, map: "products_ibfk_1")
+
+  @@index([created_by], map: "created_by")
+  @@index([is_active], map: "idx_active")
+  @@index([category], map: "idx_category")
+  @@index([product_code], map: "idx_product_code")
+  @@index([product_type], map: "idx_product_type")
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model products_backup_rename {
+  id           Int                                  @default(0)
+  product_code String                               @db.VarChar(20)
+  product_name String                               @db.VarChar(100)
+  product_type products_backup_rename_product_type? @default(FG)
+  category     String?                              @db.VarChar(50)
+  description  String?                              @db.Text
+  unit         String?                              @db.VarChar(20)
+  is_active    Boolean?                             @default(true)
+  created_by   Int?
+  created_at   DateTime?                            @default(now()) @db.Timestamp(0)
+  updated_at   DateTime?                            @default(now()) @db.Timestamp(0)
+
+  @@ignore
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model role_configurations {
+  id                    Int                     @id @default(autoincrement())
+  role_name             String                  @unique(map: "unique_role_name") @db.VarChar(50)
+  display_name          String                  @db.VarChar(100)
+  color                 String?                 @default("blue") @db.VarChar(20)
+  url_prefix            String                  @db.VarChar(50)
+  menu_items            Json
+  created_at            DateTime?               @default(now()) @db.Timestamp(0)
+  updated_at            DateTime?               @default(now()) @db.Timestamp(0)
+  role_menu_audits      role_menu_audits[]
+  role_menu_permissions role_menu_permissions[]
+
+  @@index([display_name], map: "idx_display_name")
+  @@index([url_prefix], map: "idx_url_prefix")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model role_menu_audits {
+  id                  Int                 @id @default(autoincrement())
+  actor_user_id       Int?
+  role_id             Int
+  action              String              @db.VarChar(50)
+  before_data         Json?
+  after_data          Json?
+  reason              String?             @db.Text
+  ip_address          String?             @db.VarChar(45)
+  user_agent          String?             @db.Text
+  created_at          DateTime?           @default(now()) @db.Timestamp(0)
+  users               users?              @relation(fields: [actor_user_id], references: [id], onUpdate: NoAction, map: "role_menu_audits_ibfk_1")
+  role_configurations role_configurations @relation(fields: [role_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "role_menu_audits_ibfk_2")
+
+  @@index([action], map: "idx_action")
+  @@index([actor_user_id], map: "idx_actor_user_id")
+  @@index([created_at], map: "idx_created_at")
+  @@index([role_id], map: "idx_role_id")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model role_menu_permissions {
+  id                  Int                 @id @default(autoincrement())
+  role_id             Int
+  menu_key            String              @db.VarChar(50)
+  can_view            Boolean?            @default(true)
+  created_at          DateTime?           @default(now()) @db.Timestamp(0)
+  updated_at          DateTime?           @default(now()) @db.Timestamp(0)
+  role_configurations role_configurations @relation(fields: [role_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "role_menu_permissions_ibfk_1")
+  menu_catalog        menu_catalog        @relation(fields: [menu_key], references: [menu_key], onDelete: Cascade, onUpdate: NoAction, map: "role_menu_permissions_ibfk_2")
+
+  @@unique([role_id, menu_key], map: "unique_role_menu")
+  @@index([menu_key], map: "idx_menu_key")
+  @@index([role_id], map: "idx_role_id")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model unit_conversions {
+  id               Int       @id @default(autoincrement())
+  from_unit        String    @db.VarChar(16)
+  to_unit          String    @db.VarChar(16)
+  conversion_rate  Decimal   @db.Decimal(10, 4)
+  description      String?   @db.VarChar(255)
+  material_name    String?   @db.VarChar(255)
+  material_pattern String?   @db.VarChar(255)
+  material_code    String?   @db.VarChar(16)
+  created_at       DateTime? @default(now()) @db.Timestamp(0)
+  updated_at       DateTime? @default(now()) @db.Timestamp(0)
+
+  @@unique([from_unit, to_unit, material_code], map: "unique_conversion")
+  @@index([from_unit], map: "idx_from_unit")
+  @@index([material_code], map: "idx_material_code")
+  @@index([to_unit], map: "idx_to_unit")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model user_sessions {
+  id                 Int       @id @default(autoincrement())
+  session_id         String    @unique(map: "session_id") @db.VarChar(255)
+  user_id            Int
+  refresh_token_hash String?   @db.VarChar(255)
+  ip_address         String?   @db.VarChar(45)
+  user_agent         String?   @db.Text
+  expires_at         DateTime  @db.DateTime(0)
+  is_revoked         Boolean?  @default(false)
+  revoked_at         DateTime? @db.DateTime(0)
+  created_at         DateTime? @default(now()) @db.DateTime(0)
+  last_used_at       DateTime? @default(now()) @db.DateTime(0)
+  users              users     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "user_sessions_ibfk_1")
+
+  @@index([expires_at], map: "idx_expires_at")
+  @@index([is_revoked], map: "idx_is_revoked")
+  @@index([session_id], map: "idx_session_id")
+  @@index([user_id, expires_at], map: "idx_user_expires")
+  @@index([user_id], map: "idx_user_id")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model users {
+  id                                                  Int                           @id @default(autoincrement())
+  id_code                                             String                        @unique(map: "unique_id_code") @db.VarChar(50)
+  employee_code                                       String?                       @db.VarChar(50)
+  name                                                String                        @db.VarChar(100)
+  password                                            String?                       @db.VarChar(255)
+  pin_display                                         String?                       @db.VarChar(4)
+  role_id                                             Int?                          @default(5)
+  email                                               String?                       @db.VarChar(100)
+  phone                                               String?                       @db.VarChar(20)
+  position                                            String?                       @db.VarChar(50)
+  department                                          String?                       @db.VarChar(50)
+  is_active                                           Boolean?                      @default(true)
+  created_at                                          DateTime?                     @default(now()) @db.Timestamp(0)
+  updated_at                                          DateTime?                     @default(now()) @db.Timestamp(0)
+  batch_material_usage                                batch_material_usage[]
+  batch_production_results                            batch_production_results[]
+  process_execution_operators                         process_execution_operators[]
+  process_executions                                  process_executions[]
+  process_template_history                            process_template_history[]
+  process_templates                                   process_templates[]
+  product_active_versions                             product_active_versions[]
+  product_version_assignments                         product_version_assignments[]
+  products                                            products[]
+  role_menu_audits                                    role_menu_audits[]
+  user_sessions                                       user_sessions[]
+  work_plan_drafts_work_plan_drafts_created_byTousers work_plan_drafts[]            @relation("work_plan_drafts_created_byTousers")
+  work_plan_drafts_work_plan_drafts_updated_byTousers work_plan_drafts[]            @relation("work_plan_drafts_updated_byTousers")
+  work_plan_operators                                 work_plan_operators[]
+  work_plans                                          work_plans[]
+  timetracker_user_roles                              timetracker_user_roles?
+
+  @@index([is_active], map: "idx_active")
+  @@index([department], map: "idx_department")
+  @@index([name], map: "idx_name")
+  @@index([pin_display], map: "idx_pin_display")
+  @@index([role_id], map: "idx_role_id")
+}
+
+/// TimeTracker application authorization (not shared with other systems).
+model timetracker_user_roles {
+  user_id            Int       @id
+  app_role           String    @db.VarChar(32)
+  created_at         DateTime? @default(now()) @db.Timestamp(0)
+  updated_at         DateTime? @default(now()) @db.Timestamp(0)
+  updated_by_user_id Int?
+  users              users     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_tt_user_roles_user")
+
+  @@index([app_role], map: "idx_tt_app_role")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model work_plan_drafts {
+  id                                       Int               @id @default(autoincrement())
+  production_date                          DateTime          @db.Date
+  job_code                                 String?           @db.VarChar(50)
+  job_name                                 String?           @db.VarChar(255)
+  start_time                               DateTime?         @db.Time(0)
+  end_time                                 DateTime?         @db.Time(0)
+  machine_id                               Int?
+  production_room_id                       Int?
+  notes                                    String?           @db.Text
+  workflow_status_id                       Int               @default(1)
+  operators                                Json?
+  created_by                               Int?
+  updated_by                               Int?
+  created_at                               DateTime?         @default(now()) @db.Timestamp(0)
+  updated_at                               DateTime?         @default(now()) @db.Timestamp(0)
+  is_special                               Boolean?          @default(false)
+  machines                                 machines?         @relation(fields: [machine_id], references: [id], onUpdate: NoAction, map: "work_plan_drafts_ibfk_1")
+  production_rooms                         production_rooms? @relation(fields: [production_room_id], references: [id], onUpdate: NoAction, map: "work_plan_drafts_ibfk_2")
+  users_work_plan_drafts_created_byTousers users?            @relation("work_plan_drafts_created_byTousers", fields: [created_by], references: [id], onUpdate: NoAction, map: "work_plan_drafts_ibfk_3")
+  users_work_plan_drafts_updated_byTousers users?            @relation("work_plan_drafts_updated_byTousers", fields: [updated_by], references: [id], onUpdate: NoAction, map: "work_plan_drafts_ibfk_4")
+
+  @@index([created_by], map: "created_by")
+  @@index([created_at], map: "idx_created_at")
+  @@index([job_code], map: "idx_job_code")
+  @@index([production_date], map: "idx_production_date")
+  @@index([workflow_status_id], map: "idx_workflow_status")
+  @@index([machine_id], map: "machine_id")
+  @@index([production_room_id], map: "production_room_id")
+  @@index([updated_by], map: "updated_by")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model work_plan_operators {
+  id           Int                       @id @default(autoincrement())
+  work_plan_id Int
+  user_id      Int?
+  id_code      String?                   @db.VarChar(50)
+  role         work_plan_operators_role? @default(operator)
+  created_at   DateTime?                 @default(now()) @db.Timestamp(0)
+  work_plans   work_plans                @relation(fields: [work_plan_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "work_plan_operators_ibfk_1")
+  users        users?                    @relation(fields: [user_id], references: [id], onUpdate: NoAction, map: "work_plan_operators_ibfk_2")
+
+  @@index([id_code], map: "idx_work_plan_operators_id_code")
+  @@index([user_id], map: "idx_work_plan_operators_user_id")
+  @@index([work_plan_id], map: "idx_work_plan_operators_work_plan_id")
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model work_plan_operators_backup_20251021 {
+  id           Int                                       @default(0)
+  work_plan_id Int
+  user_id      Int?
+  id_code      String?                                   @db.VarChar(50)
+  role         work_plan_operators_backup_20251021_role? @default(operator)
+  created_at   DateTime?                                 @default(now()) @db.Timestamp(0)
+
+  @@ignore
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model work_plan_workflow_statuses {
+  id                 Int       @id @default(autoincrement())
+  status_code        String    @unique(map: "unique_status_code") @db.VarChar(20)
+  status_name        String    @db.VarChar(100)
+  status_description String?   @db.Text
+  color_code         String?   @default("#000000") @db.VarChar(10)
+  display_order      Int?      @default(0)
+  is_active          Boolean?  @default(true)
+  created_at         DateTime? @default(now()) @db.Timestamp(0)
+  updated_at         DateTime? @default(now()) @db.Timestamp(0)
+
+  @@index([display_order], map: "idx_display_order")
+  @@index([is_active], map: "idx_is_active")
+  @@index([status_name], map: "idx_status_name")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model work_plans {
+  id                       Int                         @id @default(autoincrement())
+  production_date          DateTime                    @db.Date
+  job_code                 String                      @db.VarChar(50)
+  job_name                 String?                     @db.VarChar(255)
+  job_type                 work_plans_job_type?        @default(regular)
+  template_version         Int?
+  start_time               DateTime?                   @db.Time(0)
+  end_time                 DateTime?                   @db.Time(0)
+  status_id                Int?                        @default(1)
+  workflow_status          work_plans_workflow_status? @default(draft)
+  is_printed               Boolean?                    @default(false)
+  machine_id               Int?
+  production_room_id       Int?
+  bu_id                    Int                         @default(1)
+  notes                    String?                     @db.Text
+  operators                Json?
+  is_special               Boolean?                    @default(false)
+  created_by               Int?
+  created_at               DateTime?                   @default(now()) @db.Timestamp(0)
+  updated_at               DateTime?                   @default(now()) @db.Timestamp(0)
+  finished_flags           finished_flags?
+  logs                     logs[]
+  process_executions       process_executions[]
+  production_batches       production_batches[]
+  production_costs_history production_costs_history[]
+  work_plan_operators      work_plan_operators[]
+  production_statuses      production_statuses?        @relation(fields: [status_id], references: [id], onUpdate: NoAction, map: "work_plans_ibfk_1")
+  machines                 machines?                   @relation(fields: [machine_id], references: [id], onUpdate: NoAction, map: "work_plans_ibfk_2")
+  production_rooms         production_rooms?           @relation(fields: [production_room_id], references: [id], onUpdate: NoAction, map: "work_plans_ibfk_3")
+  users                    users?                      @relation(fields: [created_by], references: [id], onUpdate: NoAction, map: "work_plans_ibfk_4")
+  business_units           business_units              @relation(fields: [bu_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "work_plans_ibfk_bu")
+
+  @@index([created_by], map: "created_by")
+  @@index([production_date, job_type], map: "idx_date_job_type")
+  @@index([production_date, status_id], map: "idx_date_status")
+  @@index([production_date, workflow_status], map: "idx_date_workflow")
+  @@index([is_printed], map: "idx_is_printed")
+  @@index([job_code], map: "idx_job_code")
+  @@index([job_type], map: "idx_job_type")
+  @@index([production_date], map: "idx_production_date")
+  @@index([status_id], map: "idx_status")
+  @@index([workflow_status], map: "idx_workflow_status")
+  @@index([machine_id], map: "machine_id")
+  @@index([production_room_id], map: "production_room_id")
+  @@index([production_date, bu_id], map: "idx_work_plans_date_bu")
+  @@index([bu_id], map: "work_plans_ibfk_bu")
+}
+
+model formula_weighing_job_settings {
+  job_code          String    @id @db.VarChar(50)
+  job_name          String?   @db.VarChar(255)
+  requires_weighing Boolean   @default(true)
+  updated_at        DateTime? @default(now()) @updatedAt @db.Timestamp(0)
+
+  @@index([requires_weighing], map: "idx_requires_weighing")
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model work_plans_backup_20251021 {
+  id                 Int                                         @default(0)
+  production_date    DateTime                                    @db.Date
+  job_code           String                                      @db.VarChar(50)
+  job_name           String?                                     @db.VarChar(255)
+  job_type           work_plans_backup_20251021_job_type?        @default(regular)
+  template_version   Int?
+  start_time         DateTime?                                   @db.Time(0)
+  end_time           DateTime?                                   @db.Time(0)
+  status_id          Int?                                        @default(1)
+  workflow_status    work_plans_backup_20251021_workflow_status? @default(draft)
+  is_printed         Boolean?                                    @default(false)
+  machine_id         Int?
+  production_room_id Int?
+  notes              String?                                     @db.Text
+  operators          Json?
+  is_special         Boolean?                                    @default(false)
+  created_by         Int?
+  created_at         DateTime?                                   @default(now()) @db.Timestamp(0)
+  updated_at         DateTime?                                   @default(now()) @db.Timestamp(0)
+
+  @@ignore
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model workplan_sync_log {
+  id              Int       @id @default(autoincrement())
+  production_date DateTime  @db.Date
+  synced_at       DateTime? @default(now()) @db.Timestamp(0)
+
+  @@index([production_date], map: "idx_production_date")
+  @@index([synced_at], map: "idx_synced_at")
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model workplan_sync_log_backup_20251021 {
+  id              Int       @default(0)
+  production_date DateTime  @db.Date
+  synced_at       DateTime? @default(now()) @db.Timestamp(0)
+
+  @@ignore
+}
+
+model business_units {
+  id               Int                @id @default(autoincrement())
+  code             String             @unique(map: "unique_bu_code") @db.VarChar(32)
+  name             String             @db.VarChar(100)
+  is_active        Boolean            @default(true)
+  created_at       DateTime?          @default(now()) @db.Timestamp(0)
+  updated_at       DateTime?          @default(now()) @db.Timestamp(0)
+  production_costs production_costs[]
+  work_plans       work_plans[]
+
+  @@index([is_active], map: "idx_bu_active")
+}
+
+enum process_execution_operators_role {
+  operator
+  supervisor
+  qa
+  helper
+}
+
+enum process_template_history_change_type {
+  created
+  updated
+  deactivated
+  deleted
+}
+
+enum production_rooms_room_type {
+  hot_kitchen
+  cold_kitchen
+  prep_area
+  storage
+  packing
+  other
+}
+
+enum products_product_type {
+  FG
+  Semi_FG   @map("Semi-FG")
+  Component
+}
+
+enum products_backup_rename_product_type {
+  FG
+  Semi_FG   @map("Semi-FG")
+  Component
+}
+
+enum logs_status {
+  start
+  stop
+}
+
+enum work_plan_operators_role {
+  operator
+  supervisor
+  qa
+  helper
+}
+
+enum work_plan_operators_backup_20251021_role {
+  operator
+  supervisor
+  qa
+  helper
+}
+
+enum work_plans_job_type {
+  default
+  regular
+  special
+}
+
+enum work_plans_backup_20251021_job_type {
+  default
+  regular
+  special
+}
+
+enum machines_status {
+  active
+  inactive
+  maintenance
+}
+
+enum production_rooms_status {
+  active
+  inactive
+  maintenance
+}
+
+enum production_batches_status {
+  preparing
+  producing
+  completed
+  cancelled
+}
+
+enum work_plans_workflow_status {
+  draft
+  completed
+  printed
+}
+
+enum work_plans_backup_20251021_workflow_status {
+  draft
+  completed
+  printed
+}
+
+enum process_executions_status {
+  pending
+  in_progress
+  completed
+  skipped
+  paused
+}
